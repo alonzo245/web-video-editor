@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Cropper</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        .drop-zone {
+            border: 2px dashed #cbd5e0;
+            transition: all 0.3s ease;
+        }
+        .drop-zone:hover, .drop-zone.dragover {
+            border-color: #4299e1;
+            background-color: #ebf8ff;
+        }
+        .video-container {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 16/9;
+            background: #000;
+            overflow: hidden;
+        }
+        .video-preview {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        .video-controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            padding: 1rem;
+            background: #f3f4f6;
+            border-radius: 0.5rem;
+            margin-top: 1rem;
+        }
+        .video-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 3rem;
+            height: 3rem;
+            border-radius: 50%;
+            background: white;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .video-btn:hover {
+            background: #e5e7eb;
+            transform: scale(1.05);
+        }
+        .video-btn:active {
+            transform: scale(0.95);
+        }
+        .video-btn svg {
+            width: 1.5rem;
+            height: 1.5rem;
+        }
+        .video-time {
+            font-size: 0.875rem;
+            color: #4b5563;
+            min-width: 5rem;
+            text-align: center;
+        }
+        .video-progress {
+            flex-grow: 1;
+            height: 0.5rem;
+            background: #e5e7eb;
+            border-radius: 0.25rem;
+            cursor: pointer;
+            position: relative;
+        }
+        .video-progress-bar {
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            background: #6366f1;
+            border-radius: 0.25rem;
+            transition: width 0.1s linear;
+        }
+        .crop-frame {
+            position: absolute;
+            top: 0;
+            height: 100%;
+            background: transparent;
+            border: 2px solid #fff;
+            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
+            transition: all 0.3s ease;
+            pointer-events: none;
+        }
+        .crop-guides {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        .crop-guides::before,
+        .crop-guides::after {
+            content: '';
+            position: absolute;
+            left: 50%;
+            width: 1px;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.5);
+            transform: translateX(-50%);
+        }
+        .crop-guides::after {
+            top: 50%;
+            left: 0;
+            width: 100%;
+            height: 1px;
+            transform: translateY(-50%);
+        }
+        .help-text {
+            font-size: 12px;
+            color: #666;
+            margin-top: 4px;
+            margin-left: 24px;
+        }
+        
+        input[type="checkbox"] {
+            margin-right: 8px;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-4xl font-bold text-center mb-8 text-gray-800">Video Cropper</h1>
+        
+        <div class="max-w-2xl mx-auto bg-white rounded-lg shadow-lg p-6">
+            <div id="upload-section" class="drop-zone rounded-lg p-8 text-center">
+                <input type="file" id="video-input" accept="video/*" class="hidden">
+                <div class="space-y-4">
+                    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                    </svg>
+                    <p class="text-gray-600">Drag and drop your video here, or</p>
+                    <button onclick="document.getElementById('video-input').click()" class="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition-colors">
+                        Select Video
+                    </button>
+                </div>
+            </div>
+
+            <div id="processing-section" class="hidden mt-6">
+                <div class="space-y-4">
+                    <h2 class="text-xl font-semibold text-gray-800">Select Aspect Ratio</h2>
+                    <div class="grid grid-cols-2 gap-4">
+                        <button onclick="showVerticalOptions()" class="bg-purple-500 text-white px-6 py-3 rounded-lg hover:bg-purple-600 transition-colors">
+                            Vertical (9:16)
+                        </button>
+                        <button onclick="processVideo('16:9')" class="bg-green-500 text-white px-6 py-3 rounded-lg hover:bg-green-600 transition-colors">
+                            Horizontal (16:9)
+                        </button>
+                    </div>
+
+                    <!-- Vertical crop options -->
+                    <div id="vertical-options" class="hidden mt-4">
+                        <div class="space-y-4">
+                            <div class="relative">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Adjust Crop Position</label>
+                                <input type="range" 
+                                       id="crop-position" 
+                                       min="0" 
+                                       max="100" 
+                                       value="50" 
+                                       class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                                       oninput="updateCropPreview(this.value)">
+                                <div class="flex justify-between text-xs text-gray-500 mt-1">
+                                    <span>Left</span>
+                                    <span>Center</span>
+                                    <span>Right</span>
+                                </div>
+                            </div>
+                            <div class="relative">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Speech Recognition Language</label>
+                                <select id="language-select" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+                                    <option value="">No transcription</option>
+                                    <option value="hebrew" selected>Hebrew</option>
+                                    <option value="english">English</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="burn-subtitles"> Burn subtitles into video
+                                </label>
+                                <div class="help-text">
+                                    Subtitles will be centered and positioned 100px from the bottom.
+                                    White text with black border for visibility.
+                                </div>
+                            </div>
+                            <div class="bg-gray-100 p-4 rounded-lg">
+                                <div class="video-container">
+                                    <video id="video-preview" class="video-preview">
+                                        Your browser does not support the video tag.
+                                    </video>
+                                    <div id="crop-preview" class="crop-frame">
+                                        <div class="crop-guides"></div>
+                                    </div>
+                                </div>
+                                <div class="video-controls">
+                                    <button class="video-btn" id="playPauseBtn" onclick="togglePlay()">
+                                        <svg class="play-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                        <svg class="pause-icon hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                    </button>
+                                    <button class="video-btn" onclick="restartVideo()">
+                                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12a9 9 0 0116.618-4.982l.382.982M21 12a9 9 0 01-16.618 4.982L3.618 16M12 21V3" />
+                                        </svg>
+                                    </button>
+                                    <div class="video-progress" id="videoProgress" onclick="seekVideo(event)">
+                                        <div class="video-progress-bar" id="videoProgressBar"></div>
+                                    </div>
+                                    <span class="video-time" id="videoTime">0:00 / 0:00</span>
+                                    <div class="volume-control flex items-center gap-2 ml-4">
+                                        <button class="video-btn" onclick="toggleMute()">
+                                            <svg id="volume-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072M12 6v12m0 0l-4-4m4 4l4-4" />
+                                            </svg>
+                                        </button>
+                                        <input type="range" 
+                                               id="volume-slider" 
+                                               min="0" 
+                                               max="300" 
+                                               value="100" 
+                                               class="w-24 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                                               oninput="updateVolume(this.value)">
+                                        <span id="volume-display" class="text-sm text-gray-600 min-w-[3rem]">100%</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <button onclick="processVideoWithPosition()" class="w-full bg-purple-500 text-white px-6 py-3 rounded-lg hover:bg-purple-600 transition-colors">
+                                Process Video
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="progress-section" class="hidden mt-6">
+                <div class="w-full bg-gray-200 rounded-full h-2.5">
+                    <div id="progress-bar" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
+                </div>
+                <p id="progress-text" class="text-center mt-2 text-gray-600">Processing video...</p>
+            </div>
+
+            <div id="download-section" class="hidden mt-6 text-center">
+                <p class="text-gray-600 mb-4">Your files are ready!</p>
+                <div class="space-y-3">
+                    <button id="download-btn" class="w-full bg-green-500 text-white px-6 py-3 rounded-lg hover:bg-green-600 transition-colors">
+                        Download Video
+                    </button>
+                </div>
+            </div>
+
+            <!-- Add subtitle editor section -->
+            <div id="subtitle-editor" class="mt-4" style="display: none;">
+                <h3 class="text-xl font-semibold mb-4">Edit Subtitles</h3>
+                <div class="alert alert-info bg-blue-50 p-4 rounded-lg mb-4">
+                    Edit the subtitles below. Keep the timing and subtitle numbers intact for proper synchronization.
+                </div>
+                <textarea id="subtitle-text" class="w-full p-4 border border-gray-300 rounded-lg mb-4" rows="15" style="font-family: monospace;"></textarea>
+                
+                <!-- Add subtitle customization panel -->
+                <div id="subtitle-customization" class="bg-gray-50 p-4 rounded-lg mb-4">
+                    <h4 class="text-lg font-semibold mb-3">Subtitle Appearance</h4>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="space-y-2">
+                            <label class="block text-sm font-medium">Font Size</label>
+                            <input type="range" id="subtitle-size" min="16" max="72" value="24" 
+                                   class="w-full" oninput="updateSubtitlePreview()">
+                            <div class="text-sm text-gray-600 flex justify-between">
+                                <span>16px</span>
+                                <span id="size-value">24px</span>
+                                <span>72px</span>
+                            </div>
+                        </div>
+                        
+                        <div class="space-y-2">
+                            <label class="block text-sm font-medium">Font Color</label>
+                            <input type="color" id="subtitle-color" value="#ffffff" 
+                                   class="h-10 w-full" oninput="updateSubtitlePreview()">
+                        </div>
+                        
+                        <div class="space-y-2">
+                            <label class="block text-sm font-medium">Border Size</label>
+                            <input type="range" id="subtitle-border" min="0" max="5" value="2" 
+                                   class="w-full" oninput="updateSubtitlePreview()">
+                            <div class="text-sm text-gray-600 flex justify-between">
+                                <span>None</span>
+                                <span id="border-value">2px</span>
+                                <span>5px</span>
+                            </div>
+                        </div>
+                        
+                        <div class="space-y-2">
+                            <label class="block text-sm font-medium">Border Color</label>
+                            <input type="color" id="subtitle-border-color" value="#000000" 
+                                   class="h-10 w-full" oninput="updateSubtitlePreview()">
+                        </div>
+                        
+                        <div class="space-y-2">
+                            <label class="block text-sm font-medium">Vertical Position</label>
+                            <input type="range" id="subtitle-y" min="0" max="100" value="90" 
+                                   class="w-full" oninput="updateSubtitlePreview()">
+                            <div class="text-sm text-gray-600 flex justify-between">
+                                <span>Top</span>
+                                <span id="y-value">90%</span>
+                                <span>Bottom</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Subtitle Preview -->
+                    <div class="mt-6">
+                        <h4 class="text-lg font-semibold mb-3">Preview</h4>
+                        <div class="relative bg-gray-900 w-full h-32 rounded-lg overflow-hidden">
+                            <div id="subtitle-preview" class="absolute w-full text-center px-4">
+                                Sample subtitle text
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-4 space-x-3">
+                    <button id="save-and-render" class="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition-colors">
+                        Save and Render
+                    </button>
+                    <button id="skip-edit" class="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600 transition-colors">
+                        Skip Editing
+                    </button>
+                </div>
+            </div>
+
+            <!-- Add error section -->
+            <div id="error-section" class="hidden mt-6">
+                <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <div class="flex items-center">
+                        <svg class="h-5 w-5 text-red-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <h3 class="text-red-800 font-medium" id="error-title">Error</h3>
+                    </div>
+                    <p class="mt-2 text-red-700" id="error-message"></p>
+                    <div class="mt-4 flex space-x-3">
+                        <button id="retry-button" class="bg-red-100 text-red-700 px-4 py-2 rounded-lg hover:bg-red-200 transition-colors">
+                            Retry
+                        </button>
+                        <button onclick="hideError()" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentFileId = null;
+        let originalWidth = 0;
+        let originalHeight = 0;
+        const dropZone = document.getElementById('upload-section');
+        const videoInput = document.getElementById('video-input');
+        const processingSection = document.getElementById('processing-section');
+        const progressSection = document.getElementById('progress-section');
+        const progressBar = document.getElementById('progress-bar');
+        const progressText = document.getElementById('progress-text');
+        const downloadSection = document.getElementById('download-section');
+        const downloadBtn = document.getElementById('download-btn');
+        const verticalOptions = document.getElementById('vertical-options');
+        const cropPreview = document.getElementById('crop-preview');
+        const videoPreview = document.getElementById('video-preview');
+        const playPauseBtn = document.getElementById('playPauseBtn');
+        const videoProgressBar = document.getElementById('videoProgressBar');
+        const videoTimeDisplay = document.getElementById('videoTime');
+        const burnSubtitles = document.getElementById('burn-subtitles');
+        const languageSelect = document.getElementById('language-select');
+
+        let currentProcessingParams = null;
+
+        // Drag and drop handlers
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, highlight, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, unhighlight, false);
+        });
+
+        function highlight(e) {
+            dropZone.classList.add('dragover');
+        }
+
+        function unhighlight(e) {
+            dropZone.classList.remove('dragover');
+        }
+
+        dropZone.addEventListener('drop', handleDrop, false);
+        videoInput.addEventListener('change', handleFileSelect, false);
+
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            handleFiles(files);
+        }
+
+        function handleFileSelect(e) {
+            const files = e.target.files;
+            handleFiles(files);
+        }
+
+        async function handleFiles(files) {
+            if (files.length === 0) return;
+            
+            const file = files[0];
+            if (!file.type.startsWith('video/')) {
+                alert('Please select a video file');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) throw new Error('Upload failed');
+
+                const data = await response.json();
+                currentFileId = data.file_id;
+                originalWidth = data.dimensions.width;
+                originalHeight = data.dimensions.height;
+                
+                // Set up video preview
+                videoPreview.src = URL.createObjectURL(file);
+                videoPreview.load();
+                videoPreview.pause(); // Ensure video is paused after loading
+                
+                // Show processing section
+                document.getElementById('upload-section').classList.add('hidden');
+                processingSection.classList.remove('hidden');
+            } catch (error) {
+                alert('Error uploading video: ' + error.message);
+            }
+        }
+
+        function showVerticalOptions() {
+            verticalOptions.classList.remove('hidden');
+            updateCropPreview(50); // Center position
+            // Remove autoplay
+        }
+
+        function updateCropPreview(position) {
+            const newWidth = Math.floor(originalHeight * (9/16));
+            const maxOffset = originalWidth - newWidth;
+            const offset = (position / 100) * maxOffset;
+            
+            // Calculate preview dimensions as percentages
+            const previewWidth = (newWidth / originalWidth) * 100;
+            const previewOffset = (offset / originalWidth) * 100;
+            
+            // Update crop frame position and width
+            const cropFrame = document.getElementById('crop-preview');
+            cropFrame.style.width = `${previewWidth}%`;
+            cropFrame.style.left = `${previewOffset}%`;
+        }
+
+        function showError(title, message, canRetry = false) {
+            const errorSection = document.getElementById('error-section');
+            const errorTitle = document.getElementById('error-title');
+            const errorMessage = document.getElementById('error-message');
+            const retryButton = document.getElementById('retry-button');
+            
+            // Format error message for display
+            const formattedMessage = message.split('\n').join('<br>');
+            
+            errorTitle.textContent = title;
+            errorMessage.innerHTML = formattedMessage;  // Use innerHTML to support line breaks
+            retryButton.style.display = canRetry ? 'block' : 'none';
+            
+            // Hide other sections
+            progressSection.classList.add('hidden');
+            document.getElementById('subtitle-editor').style.display = 'none';
+            
+            // Show error section
+            errorSection.classList.remove('hidden');
+        }
+
+        function hideError() {
+            const errorSection = document.getElementById('error-section');
+            errorSection.classList.add('hidden');
+            
+            // Show appropriate section based on current state
+            if (document.getElementById('subtitle-text').value) {
+                document.getElementById('subtitle-editor').style.display = 'block';
+            } else {
+                processingSection.classList.remove('hidden');
+            }
+        }
+
+        async function processVideoWithPosition() {
+            const position = document.getElementById('crop-position').value;
+            const volume = document.getElementById('volume-slider').value;
+            const language = document.getElementById('language-select').value;
+            const shouldBurnSubtitles = document.getElementById('burn-subtitles').checked;
+            
+            // Hide processing section and show progress
+            processingSection.classList.add('hidden');
+            progressSection.classList.remove('hidden');
+            progressText.textContent = 'Processing video...';
+            
+            try {
+                if (shouldBurnSubtitles && language) {
+                    // First step: Generate transcription
+                    const transcribeResponse = await fetch(`/transcribe/${currentFileId}?language=${language}&target_ratio=9:16&position=${position}&volume=${volume}`, {
+                        method: 'POST'
+                    });
+                    
+                    if (!transcribeResponse.ok) {
+                        const errorData = await transcribeResponse.json();
+                        throw new Error(errorData.detail || 'Transcription failed');
+                    }
+                    
+                    const transcribeData = await transcribeResponse.json();
+                    
+                    // Show subtitle editor
+                    document.getElementById('subtitle-text').value = transcribeData.srt_content;
+                    document.getElementById('subtitle-editor').style.display = 'block';
+                    progressSection.classList.add('hidden');
+                    
+                    // Store processing parameters
+                    currentProcessingParams = transcribeData.processing_params;
+                    
+                    // Set up button handlers
+                    document.getElementById('save-and-render').onclick = () => renderWithSubtitles(false);
+                    document.getElementById('skip-edit').onclick = () => renderWithSubtitles(true);
+                    
+                    return;
+                }
+                
+                // If no subtitles needed, proceed with normal processing
+                await renderWithSubtitles(true);
+                
+            } catch (error) {
+                console.error('Error:', error);
+                showError(
+                    'Processing Error',
+                    error.message || 'An error occurred while processing the video',
+                    true
+                );
+                
+                // Set up retry button
+                document.getElementById('retry-button').onclick = () => {
+                    hideError();
+                    processVideoWithPosition();
+                };
+            }
+        }
+
+        async function processVideo(ratio, position = 50, volume = 100, language = "", shouldBurnSubtitles = false) {
+            if (!currentFileId) return;
+
+            processingSection.classList.add('hidden');
+            progressSection.classList.remove('hidden');
+
+            try {
+                document.getElementById('processing-status').textContent = 'Transcribing...';
+                
+                if (shouldBurnSubtitles && language !== 'none') {
+                    // First step: Generate transcription
+                    const transcribeResponse = await fetch(`/transcribe/${currentFileId}?language=${language}&target_ratio=${ratio}&position=${position}&volume=${volume}`, {
+                        method: 'POST'
+                    });
+                    
+                    if (!transcribeResponse.ok) {
+                        throw new Error(`Transcription failed: ${await transcribeResponse.text()}`);
+                    }
+                    
+                    const transcribeData = await transcribeResponse.json();
+                    
+                    // Show subtitle editor
+                    document.getElementById('subtitle-text').value = transcribeData.srt_content;
+                    document.getElementById('subtitle-editor').style.display = 'block';
+                    document.getElementById('processing-status').textContent = 'Edit subtitles if needed, then click Save and Render';
+                    
+                    // Store processing parameters
+                    currentProcessingParams = transcribeData.processing_params;
+                    
+                    // Set up button handlers
+                    document.getElementById('save-and-render').onclick = () => renderWithSubtitles(false);
+                    document.getElementById('skip-edit').onclick = () => renderWithSubtitles(true);
+                    
+                    return;
+                }
+                
+                // If no subtitles needed, proceed with normal processing
+                await renderWithSubtitles(true);
+                
+            } catch (error) {
+                console.error('Error:', error);
+                progressText.textContent = 'Error processing video';
+                progressBar.style.width = '0%';
+                processingSection.classList.remove('hidden');
+            }
+        }
+
+        async function renderWithSubtitles(skipEdit) {
+            try {
+                progressSection.classList.remove('hidden');
+                document.getElementById('subtitle-editor').style.display = 'none';
+                progressText.textContent = 'Processing video...';
+                
+                const params = currentProcessingParams || {
+                    target_ratio: '9:16',
+                    position: document.getElementById('crop-position').value,
+                    volume: document.getElementById('volume-slider').value,
+                    language: document.getElementById('language-select').value
+                };
+                
+                // Add subtitle styling parameters
+                const subtitleStyles = {
+                    fontSize: document.getElementById('subtitle-size').value,
+                    fontColor: document.getElementById('subtitle-color').value.replace('#', ''),
+                    borderSize: document.getElementById('subtitle-border').value,
+                    borderColor: document.getElementById('subtitle-border-color').value.replace('#', ''),
+                    yPosition: document.getElementById('subtitle-y').value
+                };
+                
+                const renderData = {
+                    skip_edit: skipEdit,
+                    srt_content: skipEdit ? null : document.getElementById('subtitle-text').value,
+                    subtitle_styles: subtitleStyles,
+                    ...params
+                };
+                
+                const renderResponse = await fetch(`/render/${currentFileId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(renderData)
+                });
+                
+                const responseData = await renderResponse.json();
+                
+                if (!renderResponse.ok) {
+                    const errorDetail = responseData.detail || {};
+                    const errorMessage = typeof errorDetail === 'string' ? errorDetail : errorDetail.message;
+                    const technicalError = typeof errorDetail === 'string' ? null : errorDetail.error;
+                    const canRetry = typeof errorDetail === 'string' ? true : errorDetail.can_retry;
+                    
+                    throw {
+                        message: errorMessage,
+                        technical: technicalError,
+                        canRetry: canRetry
+                    };
+                }
+                
+                // Hide progress section and show download section
+                progressSection.classList.add('hidden');
+                const downloadSection = document.getElementById('download-section');
+                downloadSection.style.display = 'block';
+                downloadSection.innerHTML = `
+                    <p class="text-gray-600 mb-4">Your files are ready!</p>
+                    <div class="space-y-3">
+                        <a href="/download/${responseData.output_file.split('/').pop()}" 
+                           class="w-full bg-green-500 text-white px-6 py-3 rounded-lg hover:bg-green-600 transition-colors inline-block text-center">
+                            Download Video
+                        </a>
+                    </div>
+                `;
+                
+            } catch (error) {
+                console.error('Error:', error);
+                
+                let errorMessage = error.message || 'An error occurred while processing the video';
+                let errorTitle = 'Processing Error';
+                
+                if (error.technical) {
+                    errorMessage = `${errorMessage}\n\nTechnical details: ${error.technical}`;
+                }
+                
+                // Show error with retry option if available
+                showError(
+                    errorTitle,
+                    errorMessage,
+                    error.canRetry !== false  // Default to true if not specified
+                );
+                
+                // Set up retry button if retry is allowed
+                if (error.canRetry !== false) {
+                    document.getElementById('retry-button').onclick = () => {
+                        hideError();
+                        renderWithSubtitles(skipEdit);
+                    };
+                }
+            }
+        }
+
+        // Video control functions
+        function togglePlay() {
+            if (videoPreview.paused) {
+                videoPreview.play();
+                playPauseBtn.querySelector('.play-icon').classList.add('hidden');
+                playPauseBtn.querySelector('.pause-icon').classList.remove('hidden');
+            } else {
+                videoPreview.pause();
+                playPauseBtn.querySelector('.play-icon').classList.remove('hidden');
+                playPauseBtn.querySelector('.pause-icon').classList.add('hidden');
+            }
+        }
+
+        function restartVideo() {
+            videoPreview.currentTime = 0;
+            if (videoPreview.paused) {
+                togglePlay();
+            }
+        }
+
+        function seekVideo(event) {
+            const progress = document.getElementById('videoProgress');
+            const position = (event.pageX - progress.offsetLeft) / progress.offsetWidth;
+            videoPreview.currentTime = position * videoPreview.duration;
+        }
+
+        function formatTime(seconds) {
+            const minutes = Math.floor(seconds / 60);
+            seconds = Math.floor(seconds % 60);
+            return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        // Update video progress
+        videoPreview.addEventListener('timeupdate', () => {
+            const progress = (videoPreview.currentTime / videoPreview.duration) * 100;
+            videoProgressBar.style.width = `${progress}%`;
+            videoTimeDisplay.textContent = `${formatTime(videoPreview.currentTime)} / ${formatTime(videoPreview.duration)}`;
+        });
+
+        // Update play/pause button on video end
+        videoPreview.addEventListener('ended', () => {
+            playPauseBtn.querySelector('.play-icon').classList.remove('hidden');
+            playPauseBtn.querySelector('.pause-icon').classList.add('hidden');
+        });
+
+        function updateVolume(value) {
+            const volumeDisplay = document.getElementById('volume-display');
+            const volumeIcon = document.getElementById('volume-icon');
+            volumeDisplay.textContent = `${value}%`;
+            
+            // Update volume icon based on value
+            if (value == 0) {
+                volumeIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />`;
+            } else if (value < 50) {
+                volumeIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z M15.536 8.464a5 5 0 010 7.072" />`;
+            } else {
+                volumeIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z M15.536 8.464a5 5 0 010 7.072 M17.536 6.464a9 9 0 010 11.072" />`;
+            }
+            
+            // Update video preview volume
+            videoPreview.volume = value / 100;
+        }
+
+        function toggleMute() {
+            const volumeSlider = document.getElementById('volume-slider');
+            if (videoPreview.volume > 0) {
+                videoPreview.dataset.previousVolume = volumeSlider.value;
+                volumeSlider.value = 0;
+                updateVolume(0);
+            } else {
+                const previousVolume = videoPreview.dataset.previousVolume || 100;
+                volumeSlider.value = previousVolume;
+                updateVolume(previousVolume);
+            }
+        }
+
+        // Add event listener to language select
+        languageSelect.addEventListener('change', (e) => {
+            if (!e.target.value) {
+                // If "No transcription" is selected, uncheck and disable burn subtitles
+                burnSubtitles.checked = false;
+                burnSubtitles.disabled = true;
+            } else {
+                // Enable burn subtitles option when a language is selected
+                burnSubtitles.disabled = false;
+            }
+        });
+
+        function updateSubtitlePreview() {
+            const preview = document.getElementById('subtitle-preview');
+            const size = document.getElementById('subtitle-size').value;
+            const color = document.getElementById('subtitle-color').value;
+            const borderSize = document.getElementById('subtitle-border').value;
+            const borderColor = document.getElementById('subtitle-border-color').value;
+            const yPosition = document.getElementById('subtitle-y').value;
+            
+            // Update value displays
+            document.getElementById('size-value').textContent = `${size}px`;
+            document.getElementById('border-value').textContent = `${borderSize}px`;
+            document.getElementById('y-value').textContent = `${yPosition}%`;
+            
+            // Apply styles to preview
+            preview.style.fontSize = `${size}px`;
+            preview.style.color = color;
+            preview.style.textShadow = borderSize > 0 
+                ? `0 0 ${borderSize}px ${borderColor}, 0 0 ${borderSize}px ${borderColor}, 0 0 ${borderSize}px ${borderColor}`
+                : 'none';
+            preview.style.bottom = `${100 - yPosition}%`;
+            preview.style.transform = 'translateY(50%)';
+        }
+    </script>
+</body>
+</html> 
