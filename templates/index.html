@@ -6,14 +6,22 @@
     <title>Video Cropper</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <style>
+        body {
+            background-color: #1a1a1a;
+            color: #e5e5e5;
+        }
+        
         .drop-zone {
-            border: 2px dashed #cbd5e0;
+            border: 2px dashed #4a5568;
+            background-color: #2d3748;
             transition: all 0.3s ease;
         }
+        
         .drop-zone:hover, .drop-zone.dragover {
             border-color: #4299e1;
-            background-color: #ebf8ff;
+            background-color: #2c5282;
         }
+        
         .video-container {
             position: relative;
             width: 100%;
@@ -21,6 +29,7 @@
             background: #000;
             overflow: hidden;
         }
+        
         .video-preview {
             position: absolute;
             top: 0;
@@ -29,15 +38,17 @@
             height: 100%;
             object-fit: contain;
         }
+        
         .video-controls {
             display: flex;
             gap: 1rem;
             align-items: center;
             padding: 1rem;
-            background: #f3f4f6;
+            background: #2d3748;
             border-radius: 0.5rem;
             margin-top: 1rem;
         }
+        
         .video-btn {
             display: flex;
             align-items: center;
@@ -45,37 +56,44 @@
             width: 3rem;
             height: 3rem;
             border-radius: 50%;
-            background: white;
+            background: #374151;
             border: none;
             cursor: pointer;
             transition: all 0.2s;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+            color: #e5e5e5;
         }
+        
         .video-btn:hover {
-            background: #e5e7eb;
+            background: #4a5568;
             transform: scale(1.05);
         }
+        
         .video-btn:active {
             transform: scale(0.95);
         }
+        
         .video-btn svg {
             width: 1.5rem;
             height: 1.5rem;
         }
+        
         .video-time {
             font-size: 0.875rem;
-            color: #4b5563;
+            color: #d1d5db;
             min-width: 5rem;
             text-align: center;
         }
+        
         .video-progress {
             flex-grow: 1;
             height: 0.5rem;
-            background: #e5e7eb;
+            background: #4a5568;
             border-radius: 0.25rem;
             cursor: pointer;
             position: relative;
         }
+        
         .video-progress-bar {
             position: absolute;
             left: 0;
@@ -85,6 +103,7 @@
             border-radius: 0.25rem;
             transition: width 0.1s linear;
         }
+        
         .crop-frame {
             position: absolute;
             top: 0;
@@ -95,6 +114,7 @@
             transition: all 0.3s ease;
             pointer-events: none;
         }
+        
         .crop-guides {
             position: absolute;
             top: 0;
@@ -103,6 +123,7 @@
             height: 100%;
             pointer-events: none;
         }
+        
         .crop-guides::before,
         .crop-guides::after {
             content: '';
@@ -113,6 +134,7 @@
             background: rgba(255, 255, 255, 0.5);
             transform: translateX(-50%);
         }
+        
         .crop-guides::after {
             top: 50%;
             left: 0;
@@ -120,20 +142,18 @@
             height: 1px;
             transform: translateY(-50%);
         }
+        
         .help-text {
-            font-size: 12px;
-            color: #666;
-            margin-top: 4px;
-            margin-left: 24px;
+            color: #9ca3af;
         }
         
         input[type="checkbox"] {
             margin-right: 8px;
         }
-
+        
         #subtitle-preview-container {
-            max-width: 100%;
-            margin: 0 auto;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: #1f2937;
         }
         
         .aspect-ratio-box {
@@ -148,7 +168,48 @@
             color: white;
             transition: all 0.3s ease;
         }
-
+        
+        textarea#subtitle-text {
+            background-color: #374151;
+            color: #e5e5e5;
+            border-color: #4b5563;
+        }
+        
+        textarea#subtitle-text:focus {
+            border-color: #6366f1;
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+        }
+        
+        #subtitle-customization {
+            background-color: #2d3748;
+        }
+        
+        input[type="range"] {
+            background-color: #4a5568;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            background: #6366f1;
+        }
+        
+        select {
+            background-color: #374151;
+            color: #e5e5e5;
+            border-color: #4b5563;
+        }
+        
+        select:focus {
+            border-color: #6366f1;
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+        }
+        
+        .alert-info {
+            background-color: #1e3a8a;
+            color: #bfdbfe;
+        }
+        
         @media (min-width: 1024px) {
             #subtitle-editor .sticky {
                 position: sticky;
@@ -156,26 +217,6 @@
             }
         }
         
-        #subtitle-preview-container {
-            max-width: 100%;
-            margin: 0 auto;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        .aspect-ratio-box {
-            width: 100%;
-            height: 0;
-            position: relative;
-            transition: padding-top 0.3s ease;
-        }
-        
-        #subtitle-preview {
-            background: rgba(0, 0, 0, 0.8);
-            color: white;
-            transition: all 0.3s ease;
-        }
-        
-        /* Responsive adjustments */
         @media (max-width: 1023px) {
             #subtitle-editor .flex-col {
                 gap: 2rem;
@@ -183,19 +224,19 @@
         }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen">
+<body class="min-h-screen">
     <div class="container mx-auto px-4 py-8">
-        <h1 class="text-4xl font-bold text-center mb-8 text-gray-800">Video Cropper</h1>
+        <h1 class="text-4xl font-bold text-center mb-8 text-gray-100">Video Cropper</h1>
         
-        <div class="max-w-[1200px] mx-auto bg-white rounded-lg shadow-lg p-6">
+        <div class="max-w-[1200px] mx-auto bg-gray-800 rounded-lg shadow-xl p-6">
             <div id="upload-section" class="drop-zone rounded-lg p-8 text-center">
                 <input type="file" id="video-input" accept="video/*" class="hidden">
                 <div class="space-y-4">
                     <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
                     </svg>
-                    <p class="text-gray-600">Drag and drop your video here, or</p>
-                    <button onclick="document.getElementById('video-input').click()" class="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition-colors">
+                    <p class="text-gray-300">Drag and drop your video here, or</p>
+                    <button onclick="document.getElementById('video-input').click()" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors">
                         Select Video
                     </button>
                 </div>
@@ -203,12 +244,12 @@
 
             <div id="processing-section" class="hidden mt-6">
                 <div class="space-y-4">
-                    <h2 class="text-xl font-semibold text-gray-800">Select Aspect Ratio</h2>
+                    <h2 class="text-xl font-semibold text-gray-100">Select Aspect Ratio</h2>
                     <div class="grid grid-cols-2 gap-4">
-                        <button onclick="showVerticalOptions()" class="bg-purple-500 text-white px-6 py-3 rounded-lg hover:bg-purple-600 transition-colors">
+                        <button onclick="showVerticalOptions()" class="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors">
                             Vertical (9:16)
                         </button>
-                        <button onclick="processVideo('16:9')" class="bg-green-500 text-white px-6 py-3 rounded-lg hover:bg-green-600 transition-colors">
+                        <button onclick="processVideo('16:9')" class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors">
                             Horizontal (16:9)
                         </button>
                     </div>
@@ -217,36 +258,36 @@
                     <div id="vertical-options" class="hidden mt-4">
                         <div class="space-y-4">
                             <div class="relative">
-                                <button onclick="processVideoWithPosition()" class="w-full bg-purple-500 text-white px-6 py-3 rounded-lg hover:bg-purple-600 transition-colors mb-[20px]">
+                                <button onclick="processVideoWithPosition()" class="w-full bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors mb-[20px]">
                                     Process Video
                                 </button>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Adjust Crop Position</label>
+                                <label class="block text-sm font-medium text-gray-200 mb-2">Adjust Crop Position</label>
                                 <input type="range" 
                                        id="crop-position" 
                                        min="0" 
                                        max="100" 
                                        value="50" 
-                                       class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                                       class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
                                        oninput="updateCropPreview(this.value)">
-                                <div class="flex justify-between text-xs text-gray-500 mt-1">
+                                <div class="flex justify-between text-xs text-gray-400 mt-1">
                                     <span>Left</span>
                                     <span>Center</span>
                                     <span>Right</span>
                                 </div>
                             </div>
                             <div class="relative">
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Speech Recognition Language</label>
-                                <select id="language-select" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+                                <label class="block text-sm font-medium text-gray-200 mb-2">Speech Recognition Language</label>
+                                <select id="language-select" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-gray-200">
                                     <option value="">No transcription</option>
                                     <option value="hebrew" selected>Hebrew</option>
                                     <option value="english">English</option>
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label>
-                                    <input type="checkbox" id="burn-subtitles" checked="checked"> Burn subtitles into video
+                                <label class="text-gray-200">
+                                    <input type="checkbox" id="burn-subtitles" checked="checked" class="bg-gray-700 border-gray-600"> Burn subtitles into video
                                 </label>
-                                <div class="help-text">
+                                <div class="help-text text-gray-400">
                                     Subtitles will be centered and positioned 100px from the bottom.
                                     White text with black border for visibility.
                                 </div>
@@ -296,7 +337,7 @@
                                     </div>
                                 </div>
                             </div>
-                            <button onclick="processVideoWithPosition()" class="w-full bg-purple-500 text-white px-6 py-3 rounded-lg hover:bg-purple-600 transition-colors">
+                            <button onclick="processVideoWithPosition()" class="w-full bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors">
                                 Process Video
                             </button>
                         </div>
@@ -305,17 +346,17 @@
             </div>
 
             <div id="progress-section" class="hidden mt-6">
-                <div class="w-full bg-gray-200 rounded-full h-2.5">
+                <div class="w-full bg-gray-700 rounded-full h-2.5">
                     <div id="progress-bar" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
                 </div>
-                <p id="progress-text" class="text-center mt-2 text-gray-600">Processing video...</p>
+                <p id="progress-text" class="text-center mt-2 text-gray-300">Processing video...</p>
             </div>
 
             <div id="download-section" class="hidden mt-6 text-center">
-                <p class="text-gray-600 mb-4">Your files are ready!</p>
+                <p class="text-gray-300 mb-4">Your files are ready!</p>
                 <div class="space-y-3">
                     <!-- Download Video Button -->
-                    <button id="download-video-btn" class="w-full bg-green-500 text-white px-6 py-3 rounded-lg hover:bg-green-600 transition-colors flex items-center justify-center space-x-2">
+                    <button id="download-video-btn" class="w-full bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center space-x-2">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
                         </svg>
@@ -323,7 +364,7 @@
                     </button>
 
                     <!-- Download SRT Button -->
-                    <button id="download-srt-btn" class="w-full bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 transition-colors flex items-center justify-center space-x-2">
+                    <button id="download-srt-btn" class="w-full bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                         </svg>
@@ -331,7 +372,7 @@
                     </button>
 
                     <!-- Download Transcript Button -->
-                    <button id="download-txt-btn" class="w-full bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 transition-colors flex items-center justify-center space-x-2">
+                    <button id="download-txt-btn" class="w-full bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                         </svg>
@@ -339,10 +380,10 @@
                     </button>
 
                     <!-- Divider -->
-                    <div class="border-t border-gray-300 my-4"></div>
+                    <div class="border-t border-gray-600 my-4"></div>
 
                     <!-- Upload New Video Button -->
-                    <button id="new-video-btn" class="w-full bg-gray-500 text-white px-6 py-3 rounded-lg hover:bg-gray-600 transition-colors flex items-center justify-center space-x-2">
+                    <button id="new-video-btn" class="w-full bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-gray-700 transition-colors flex items-center justify-center space-x-2">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                         </svg>
@@ -444,19 +485,19 @@
 
             <!-- Add error section -->
             <div id="error-section" class="hidden mt-6">
-                <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                <div class="bg-red-900 border border-red-800 rounded-lg p-4">
                     <div class="flex items-center">
                         <svg class="h-5 w-5 text-red-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
-                        <h3 class="text-red-800 font-medium" id="error-title">Error</h3>
+                        <h3 class="text-red-100 font-medium" id="error-title">Error</h3>
                     </div>
-                    <p class="mt-2 text-red-700" id="error-message"></p>
+                    <p class="mt-2 text-red-200" id="error-message"></p>
                     <div class="mt-4 flex space-x-3">
-                        <button id="retry-button" class="bg-red-100 text-red-700 px-4 py-2 rounded-lg hover:bg-red-200 transition-colors">
+                        <button id="retry-button" class="bg-red-800 text-red-100 px-4 py-2 rounded-lg hover:bg-red-700 transition-colors">
                             Retry
                         </button>
-                        <button onclick="hideError()" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors">
+                        <button onclick="hideError()" class="bg-gray-700 text-gray-200 px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors">
                             Cancel
                         </button>
                     </div>
