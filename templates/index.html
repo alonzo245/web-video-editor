@@ -130,13 +130,64 @@
         input[type="checkbox"] {
             margin-right: 8px;
         }
+
+        #subtitle-preview-container {
+            max-width: 100%;
+            margin: 0 auto;
+        }
+        
+        .aspect-ratio-box {
+            width: 100%;
+            height: 0;
+            position: relative;
+            transition: padding-top 0.3s ease;
+        }
+        
+        #subtitle-preview {
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            transition: all 0.3s ease;
+        }
+
+        @media (min-width: 1024px) {
+            #subtitle-editor .sticky {
+                position: sticky;
+                top: 1rem;
+            }
+        }
+        
+        #subtitle-preview-container {
+            max-width: 100%;
+            margin: 0 auto;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .aspect-ratio-box {
+            width: 100%;
+            height: 0;
+            position: relative;
+            transition: padding-top 0.3s ease;
+        }
+        
+        #subtitle-preview {
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            transition: all 0.3s ease;
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 1023px) {
+            #subtitle-editor .flex-col {
+                gap: 2rem;
+            }
+        }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen">
     <div class="container mx-auto px-4 py-8">
         <h1 class="text-4xl font-bold text-center mb-8 text-gray-800">Video Cropper</h1>
         
-        <div class="max-w-2xl mx-auto bg-white rounded-lg shadow-lg p-6">
+        <div class="max-w-[1200px] mx-auto bg-white rounded-lg shadow-lg p-6">
             <div id="upload-section" class="drop-zone rounded-lg p-8 text-center">
                 <input type="file" id="video-input" accept="video/*" class="hidden">
                 <div class="space-y-4">
@@ -306,76 +357,88 @@
                 <div class="alert alert-info bg-blue-50 p-4 rounded-lg mb-4">
                     Edit the subtitles below. Keep the timing and subtitle numbers intact for proper synchronization.
                 </div>
-                <textarea id="subtitle-text" class="w-full p-4 border border-gray-300 rounded-lg mb-4" rows="15" style="font-family: monospace;"></textarea>
                 
-                <!-- Add subtitle customization panel -->
-                <div id="subtitle-customization" class="bg-gray-50 p-4 rounded-lg mb-4">
-                    <h4 class="text-lg font-semibold mb-3">Subtitle Appearance</h4>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="space-y-2">
-                            <label class="block text-sm font-medium">Font Size</label>
-                            <input type="range" id="subtitle-size" min="16" max="72" value="24" 
-                                   class="w-full" oninput="updateSubtitlePreview()">
-                            <div class="text-sm text-gray-600 flex justify-between">
-                                <span>16px</span>
-                                <span id="size-value">24px</span>
-                                <span>72px</span>
+                <!-- Two-column layout container -->
+                <div class="flex flex-col lg:flex-row gap-6">
+                    <!-- Left column: Editor and controls -->
+                    <div class="w-[70%]">
+                        <textarea id="subtitle-text" class="w-full p-4 border border-gray-300 rounded-lg mb-4" rows="15" style="font-family: monospace;"></textarea>
+                        
+                        <!-- Subtitle customization panel -->
+                        <div id="subtitle-customization" class="bg-gray-50 p-4 rounded-lg mb-4">
+                            <h4 class="text-lg font-semibold mb-3">Subtitle Appearance</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="space-y-2">
+                                    <label class="block text-sm font-medium">Font Size</label>
+                                    <input type="range" id="subtitle-size" min="16" max="72" value="24" 
+                                           class="w-full" oninput="updateSubtitlePreview()">
+                                    <div class="text-sm text-gray-600 flex justify-between">
+                                        <span>16px</span>
+                                        <span id="size-value">24px</span>
+                                        <span>72px</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="space-y-2">
+                                    <label class="block text-sm font-medium">Font Color</label>
+                                    <input type="color" id="subtitle-color" value="#ffffff" 
+                                           class="h-10 w-full" oninput="updateSubtitlePreview()">
+                                </div>
+                                
+                                <div class="space-y-2">
+                                    <label class="block text-sm font-medium">Border Size</label>
+                                    <input type="range" id="subtitle-border" min="0" max="5" value="2" 
+                                           class="w-full" oninput="updateSubtitlePreview()">
+                                    <div class="text-sm text-gray-600 flex justify-between">
+                                        <span>None</span>
+                                        <span id="border-value">2px</span>
+                                        <span>5px</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="space-y-2">
+                                    <label class="block text-sm font-medium">Border Color</label>
+                                    <input type="color" id="subtitle-border-color" value="#000000" 
+                                           class="h-10 w-full" oninput="updateSubtitlePreview()">
+                                </div>
+                                
+                                <div class="space-y-2">
+                                    <label class="block text-sm font-medium">Vertical Position</label>
+                                    <input type="range" id="subtitle-y" min="0" max="100" value="90" 
+                                           class="w-full" oninput="updateSubtitlePreview()">
+                                    <div class="text-sm text-gray-600 flex justify-between">
+                                        <span>Top</span>
+                                        <span id="y-value">90%</span>
+                                        <span>Bottom</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         
-                        <div class="space-y-2">
-                            <label class="block text-sm font-medium">Font Color</label>
-                            <input type="color" id="subtitle-color" value="#ffffff" 
-                                   class="h-10 w-full" oninput="updateSubtitlePreview()">
-                        </div>
-                        
-                        <div class="space-y-2">
-                            <label class="block text-sm font-medium">Border Size</label>
-                            <input type="range" id="subtitle-border" min="0" max="5" value="2" 
-                                   class="w-full" oninput="updateSubtitlePreview()">
-                            <div class="text-sm text-gray-600 flex justify-between">
-                                <span>None</span>
-                                <span id="border-value">2px</span>
-                                <span>5px</span>
-                            </div>
-                        </div>
-                        
-                        <div class="space-y-2">
-                            <label class="block text-sm font-medium">Border Color</label>
-                            <input type="color" id="subtitle-border-color" value="#000000" 
-                                   class="h-10 w-full" oninput="updateSubtitlePreview()">
-                        </div>
-                        
-                        <div class="space-y-2">
-                            <label class="block text-sm font-medium">Vertical Position</label>
-                            <input type="range" id="subtitle-y" min="0" max="100" value="90" 
-                                   class="w-full" oninput="updateSubtitlePreview()">
-                            <div class="text-sm text-gray-600 flex justify-between">
-                                <span>Top</span>
-                                <span id="y-value">90%</span>
-                                <span>Bottom</span>
-                            </div>
+                        <div class="flex space-x-3">
+                            <button id="save-and-render" class="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition-colors">
+                                Save and Render
+                            </button>
+                            <button id="skip-edit" class="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600 transition-colors">
+                                Skip Editing
+                            </button>
                         </div>
                     </div>
                     
-                    <!-- Subtitle Preview -->
-                    <div class="mt-6">
-                        <h4 class="text-lg font-semibold mb-3">Preview</h4>
-                        <div class="relative bg-gray-900 w-full h-32 rounded-lg overflow-hidden">
-                            <div id="subtitle-preview" class="absolute w-full text-center px-4">
-                                Sample subtitle text
+                    <!-- Right column: Preview -->
+                    <div class="w-[30%]">
+                        <div class="sticky top-4">
+                            <h4 class="text-lg font-semibold mb-3">Preview</h4>
+                            <div id="subtitle-preview-container" class="relative bg-gray-900 w-full rounded-lg overflow-hidden shadow-lg" style="position: relative;">
+                                <!-- Aspect ratio maintainer -->
+                                <div class="aspect-ratio-box" style="padding-top: 56.25%;"><!-- Default 16:9 ratio (9/16 * 100) --></div>
+                                <!-- Preview content -->
+                                <div id="subtitle-preview" class="absolute inset-0 flex items-center justify-center px-4">
+                                    <span class="text-center">Sample subtitle text</span>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-                
-                <div class="mt-4 space-x-3">
-                    <button id="save-and-render" class="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition-colors">
-                        Save and Render
-                    </button>
-                    <button id="skip-edit" class="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600 transition-colors">
-                        Skip Editing
-                    </button>
                 </div>
             </div>
 
@@ -978,6 +1041,23 @@
                 updateSubtitlePreview();
             };
         }
+
+        function updatePreviewAspectRatio(ratio) {
+            const aspectRatioBox = document.querySelector('.aspect-ratio-box');
+            if (ratio === '9:16') {
+                aspectRatioBox.style.paddingTop = '177.78%'; // (16/9 * 100)
+            } else {
+                aspectRatioBox.style.paddingTop = '56.25%';  // (9/16 * 100)
+            }
+        }
+
+        // Update the aspect ratio when ratio buttons are clicked
+        document.querySelector('button[onclick="showVerticalOptions()"]').addEventListener('click', () => {
+            updatePreviewAspectRatio('9:16');
+        });
+        document.querySelector('button[onclick="processVideo(\'16:9\')"]').addEventListener('click', () => {
+            updatePreviewAspectRatio('16:9');
+        });
     </script>
 </body>
 </html> 
