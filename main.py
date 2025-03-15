@@ -213,26 +213,35 @@ def crop_video(input_path: str, output_path: str, target_ratio: str, position: f
                 font_color = rgb_to_ass(font_color)
                 border_color = rgb_to_ass(border_color)
                 
+                # Scale font size based on video height for better readability
+                base_font_size = font_size
+                font_size = max(base_font_size, int(new_height * (base_font_size / 720)))  # Scale relative to 720p
+                # Scale border size proportionally
+                border_size = max(border_size, border_size * (font_size / base_font_size))
+                
                 logger.info(f"Using custom styles: size={font_size}, color={font_color}, border={border_size}")
             else:
                 # Improved default styling
-                font_size = max(32, min(64, new_height // 15))  # Larger default font size
+                base_font_size = new_height // 15  # Base size relative to video height
+                font_size = max(32, min(84, base_font_size))  # Larger default font size with upper limit
                 font_color = 'FFFFFF'  # White in ASS format
-                border_size = 3
+                border_size = max(3, font_size / 12)  # Proportional border size
                 border_color = '000000'  # Black in ASS format
                 y_position = 90
                 logger.info(f"Using default styles: size={font_size}, color={font_color}, border={border_size}")
             
-            # Create ASS style header with corrected color format
+            # Create ASS style header with improved text rendering
             ass_header = f"""[Script Info]
 ScriptType: v4.00+
 PlayResX: {new_width}
 PlayResY: {new_height}
 WrapStyle: 0
+ScaledBorderAndShadow: yes
+Kerning: yes
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Default,Arial,{font_size},&H00{font_color},&H000000FF,&H00{border_color},&H00000000,0,0,0,0,100,100,0,0,1,{border_size},0,2,10,10,{int((new_height * (100 - y_position) / 100))},1
+Style: Default,Arial,{font_size},&H00{font_color},&H000000FF,&H00{border_color},&H80000000,-1,0,0,0,100,100,0,0,1,{border_size:.1f},0.5,2,10,10,{int((new_height * (100 - y_position) / 100))},1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
@@ -583,21 +592,35 @@ async def render_video_endpoint(
         
         # Create temporary SRT file if content is provided
         temp_srt = None
-        if not skip_edit and srt_content:
+        transcript_files = {}
+        
+        # Always generate transcript files if language is specified
+        if language:
             try:
-                temp_srt = TRANSCRIPTS_DIR / f"temp_{uuid.uuid4()}.srt"
-                temp_srt.write_text(srt_content, encoding='utf-8')
-                logger.info(f"Created temporary SRT file: {temp_srt}")
+                logger.info(f"Generating transcription files for language: {language}")
+                result = transcribe_audio(str(input_file), language)
+                
+                # Create SRT file
+                srt_path = TRANSCRIPTS_DIR / f"transcript_{uuid.uuid4()}.srt"
+                create_srt_file(result["segments"], srt_path)
+                transcript_files["srt"] = str(srt_path)
+                
+                # Create TXT file
+                txt_path = TRANSCRIPTS_DIR / f"transcript_{uuid.uuid4()}.txt"
+                create_txt_file(result["segments"], txt_path)
+                transcript_files["txt"] = str(txt_path)
+                
+                logger.info(f"Generated transcript files: {transcript_files}")
+                
+                # If we have edited content, use it for burning subtitles
+                if not skip_edit and srt_content:
+                    temp_srt = TRANSCRIPTS_DIR / f"temp_{uuid.uuid4()}.srt"
+                    temp_srt.write_text(srt_content, encoding='utf-8')
+                    logger.info(f"Created temporary SRT file for burning: {temp_srt}")
             except Exception as e:
-                logger.error(f"Failed to create temporary SRT file: {e}")
-                raise HTTPException(
-                    status_code=500,
-                    detail={
-                        "message": "Failed to process subtitle file",
-                        "error": str(e),
-                        "can_retry": True
-                    }
-                )
+                logger.error(f"Failed to generate transcript files: {e}")
+                # Continue with video processing even if transcript generation fails
+                logger.warning("Continuing with video processing despite transcript generation failure")
         
         try:
             # Process video with subtitle customization
@@ -626,6 +649,7 @@ async def render_video_endpoint(
             
             return {
                 "output_file": str(output_file),
+                "transcript_files": transcript_files,
                 "message": "Video processed successfully"
             }
             

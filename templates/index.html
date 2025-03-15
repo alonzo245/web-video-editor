@@ -263,8 +263,39 @@
             <div id="download-section" class="hidden mt-6 text-center">
                 <p class="text-gray-600 mb-4">Your files are ready!</p>
                 <div class="space-y-3">
-                    <button id="download-btn" class="w-full bg-green-500 text-white px-6 py-3 rounded-lg hover:bg-green-600 transition-colors">
-                        Download Video
+                    <!-- Download Video Button -->
+                    <button id="download-video-btn" class="w-full bg-green-500 text-white px-6 py-3 rounded-lg hover:bg-green-600 transition-colors flex items-center justify-center space-x-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                        </svg>
+                        <span>Download Video</span>
+                    </button>
+
+                    <!-- Download SRT Button -->
+                    <button id="download-srt-btn" class="w-full bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 transition-colors flex items-center justify-center space-x-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                        <span>Download Subtitles (SRT)</span>
+                    </button>
+
+                    <!-- Download Transcript Button -->
+                    <button id="download-txt-btn" class="w-full bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 transition-colors flex items-center justify-center space-x-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                        <span>Download Transcript (TXT)</span>
+                    </button>
+
+                    <!-- Divider -->
+                    <div class="border-t border-gray-300 my-4"></div>
+
+                    <!-- Upload New Video Button -->
+                    <button id="new-video-btn" class="w-full bg-gray-500 text-white px-6 py-3 rounded-lg hover:bg-gray-600 transition-colors flex items-center justify-center space-x-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                        </svg>
+                        <span>Upload New Video</span>
                     </button>
                 </div>
             </div>
@@ -669,34 +700,24 @@
                     body: JSON.stringify(renderData)
                 });
                 
-                const responseData = await renderResponse.json();
-                
                 if (!renderResponse.ok) {
-                    const errorDetail = responseData.detail || {};
-                    const errorMessage = typeof errorDetail === 'string' ? errorDetail : errorDetail.message;
-                    const technicalError = typeof errorDetail === 'string' ? null : errorDetail.error;
-                    const canRetry = typeof errorDetail === 'string' ? true : errorDetail.can_retry;
-                    
+                    const errorData = await renderResponse.json();
                     throw {
-                        message: errorMessage,
-                        technical: technicalError,
-                        canRetry: canRetry
+                        message: errorData.detail.message || 'Video processing failed',
+                        technical: errorData.detail.technical_details,
+                        canRetry: errorData.detail.can_retry
                     };
                 }
                 
-                // Hide progress section and show download section
+                const responseData = await renderResponse.json();
+                
+                // Hide progress and show download section
                 progressSection.classList.add('hidden');
-                const downloadSection = document.getElementById('download-section');
-                downloadSection.style.display = 'block';
-                downloadSection.innerHTML = `
-                    <p class="text-gray-600 mb-4">Your files are ready!</p>
-                    <div class="space-y-3">
-                        <a href="/download/${responseData.output_file.split('/').pop()}" 
-                           class="w-full bg-green-500 text-white px-6 py-3 rounded-lg hover:bg-green-600 transition-colors inline-block text-center">
-                            Download Video
-                        </a>
-                    </div>
-                `;
+                downloadSection.classList.remove('hidden');
+                
+                // Update download buttons with file information
+                const transcriptFiles = responseData.transcript_files || {};
+                updateDownloadButtons(responseData.output_file, transcriptFiles);
                 
             } catch (error) {
                 console.error('Error:', error);
@@ -834,6 +855,128 @@
                 : 'none';
             preview.style.bottom = `${100 - yPosition}%`;
             preview.style.transform = 'translateY(50%)';
+        }
+
+        // Update the download section handlers
+        function updateDownloadButtons(outputFile, transcriptFiles = {}) {
+            // Video download button
+            const videoBtn = document.getElementById('download-video-btn');
+            if (outputFile) {
+                videoBtn.onclick = async () => {
+                    try {
+                        const response = await fetch(`/download/${outputFile.split('/').pop()}`);
+                        if (!response.ok) throw new Error('Download failed');
+                        
+                        // Create a temporary anchor and trigger download
+                        const blob = await response.blob();
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = outputFile.split('/').pop();
+                        document.body.appendChild(a);
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                        document.body.removeChild(a);
+
+                        // Clean up files after successful download
+                        await fetch(`/confirm-download/${currentFileId}`, { method: 'POST' });
+                    } catch (error) {
+                        console.error('Download error:', error);
+                        showError('Download Failed', error.message || 'Failed to download the video file');
+                    }
+                };
+                videoBtn.disabled = false;
+                videoBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            } else {
+                videoBtn.disabled = true;
+                videoBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            }
+
+            // SRT download button
+            const srtBtn = document.getElementById('download-srt-btn');
+            if (transcriptFiles && transcriptFiles.srt) {
+                srtBtn.onclick = async () => {
+                    try {
+                        const response = await fetch(`/download/${transcriptFiles.srt.split('/').pop()}`);
+                        if (!response.ok) throw new Error('Download failed');
+                        
+                        const blob = await response.blob();
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `transcript_${currentFileId}.srt`;
+                        document.body.appendChild(a);
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                        document.body.removeChild(a);
+                    } catch (error) {
+                        console.error('Download error:', error);
+                        showError('Download Failed', error.message || 'Failed to download the SRT file');
+                    }
+                };
+                srtBtn.disabled = false;
+                srtBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            } else {
+                srtBtn.disabled = true;
+                srtBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            }
+
+            // TXT download button
+            const txtBtn = document.getElementById('download-txt-btn');
+            if (transcriptFiles && transcriptFiles.txt) {
+                txtBtn.onclick = async () => {
+                    try {
+                        const response = await fetch(`/download/${transcriptFiles.txt.split('/').pop()}`);
+                        if (!response.ok) throw new Error('Download failed');
+                        
+                        const blob = await response.blob();
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `transcript_${currentFileId}.txt`;
+                        document.body.appendChild(a);
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                        document.body.removeChild(a);
+                    } catch (error) {
+                        console.error('Download error:', error);
+                        showError('Download Failed', error.message || 'Failed to download the TXT file');
+                    }
+                };
+                txtBtn.disabled = false;
+                txtBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            } else {
+                txtBtn.disabled = true;
+                txtBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            }
+
+            // Upload new video button
+            document.getElementById('new-video-btn').onclick = () => {
+                // Reset the application state
+                currentFileId = null;
+                document.getElementById('video-preview').src = '';
+                document.getElementById('subtitle-editor').style.display = 'none';
+                document.getElementById('processing-section').classList.add('hidden');
+                document.getElementById('progress-section').classList.add('hidden');
+                document.getElementById('download-section').classList.add('hidden');
+                document.getElementById('error-section').classList.add('hidden');
+                document.getElementById('upload-section').classList.remove('hidden');
+                
+                // Reset form values
+                document.getElementById('video-input').value = '';
+                document.getElementById('crop-position').value = 50;
+                document.getElementById('volume-slider').value = 100;
+                document.getElementById('language-select').value = '';
+                document.getElementById('burn-subtitles').checked = false;
+                
+                // Reset subtitle customization
+                document.getElementById('subtitle-size').value = 24;
+                document.getElementById('subtitle-color').value = '#ffffff';
+                document.getElementById('subtitle-border').value = 2;
+                document.getElementById('subtitle-border-color').value = '#000000';
+                document.getElementById('subtitle-y').value = 90;
+                updateSubtitlePreview();
+            };
         }
     </script>
 </body>
