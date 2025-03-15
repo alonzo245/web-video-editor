@@ -1,117 +1,111 @@
 # Web Video Editor
 
-A FastAPI-based web application for video processing with features including aspect ratio conversion, volume adjustment, and subtitle generation/burning.
+A web-based video editor that allows users to crop videos, add subtitles, and customize their appearance. Built with FastAPI and modern JavaScript.
 
 ## Features
 
-- Video cropping/resizing to 16:9 or 9:16 aspect ratios
-- Volume adjustment (0-300%)
-- Automatic speech transcription (English and Hebrew)
+- Video upload via drag & drop or file selection
+- Video cropping with aspect ratio options (16:9 and 9:16)
 - Subtitle generation and customization
-- Subtitle burning into videos
-- Modern web interface
-- Real-time video processing
+  - Font size adjustment
+  - Color selection
+  - Border size and color customization
+  - Vertical position adjustment
+- Real-time subtitle preview
+- Video playback controls
+- Multiple language support for subtitle generation
 
 ## Prerequisites
 
-- Python 3.8+
-- FFmpeg
-- [Whisper](https://github.com/openai/whisper) for speech recognition
+- Python 3.8 or higher
+- Node.js and npm (for Tailwind CSS)
+- FFmpeg installed on your system
 
 ## Installation
 
 1. Clone the repository:
 
 ```bash
-git clone [repository-url]
+git clone <repository-url>
 cd web-video-editor
 ```
 
-2. Install the required Python packages:
+2. Create a Python virtual environment and activate it:
+
+```bash
+python -m venv venv
+source venv/bin/activate  # On Windows, use: venv\Scripts\activate
+```
+
+3. Install Python dependencies:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-3. Ensure FFmpeg is installed on your system:
+4. Install Node.js dependencies:
 
-- **macOS**: `brew install ffmpeg`
-- **Ubuntu/Debian**: `sudo apt-get install ffmpeg`
-- **Windows**: Download from [FFmpeg website](https://ffmpeg.org/download.html)
+```bash
+npm install
+```
+
+5. Build the CSS:
+
+```bash
+npm run build
+```
+
+## Running the Application
+
+1. Make sure your virtual environment is activated:
+
+```bash
+source venv/bin/activate  # On Windows, use: venv\Scripts\activate
+```
+
+2. Start the FastAPI server:
+
+```bash
+uvicorn main:app --reload
+```
+
+3. Open your browser and navigate to:
+
+```
+http://localhost:8000
+```
 
 ## Project Structure
 
 ```
 web-video-editor/
 ├── main.py              # FastAPI application
-├── static/              # Static files (JS, CSS)
-├── templates/           # HTML templates
-├── uploads/            # Temporary storage for uploaded videos
-├── outputs/            # Processed video output directory
-└── transcripts/        # Generated subtitle files
+├── static/
+│   ├── css/            # CSS files
+│   └── js/             # JavaScript modules
+│       ├── main.js
+│       └── modules/    # JavaScript module files
+├── templates/          # HTML templates
+├── uploads/           # Temporary storage for uploaded videos
+├── outputs/           # Processed video output directory
+└── transcripts/       # Generated subtitle files
 ```
 
-## Usage
+## Development
 
-1. Start the server:
-
-```bash
-uvicorn main:app --reload
-```
-
-2. Open your browser and navigate to `http://localhost:8000`
-
-3. Upload a video and choose from the following options:
-   - Select target aspect ratio (16:9 or 9:16)
-   - Adjust horizontal position (for 9:16 cropping)
-   - Set volume level
-   - Choose language for transcription (English or Hebrew)
-   - Customize subtitle appearance
-
-## API Endpoints
-
-- `GET /`: Main web interface
-- `POST /upload`: Upload video file
-- `POST /crop/{file_id}`: Process video with specified parameters
-- `POST /transcribe/{file_id}`: Generate transcription
-- `POST /render/{file_id}`: Render video with customized subtitles
-- `GET /download/{filename}`: Download processed files
-- `POST /confirm-download/{file_id}`: Clean up files after download
-
-## Environment Setup
-
-The application requires write access to the following directories:
-
-- `uploads/`: Temporary storage for uploaded videos
-- `outputs/`: Storage for processed videos
-- `transcripts/`: Storage for generated subtitle files
-
-## Error Handling
-
-The application includes comprehensive error handling for:
-
-- Invalid file types
-- Processing failures
-- File system errors
-- Transcription errors
-- FFmpeg processing errors
-
-## Security Considerations
-
-- Temporary files are automatically cleaned up
-- File extensions are validated
-- Process isolation for FFmpeg commands
-- Resource limits on file uploads
-- Secure file handling practices
+- The application uses ES6 modules for JavaScript organization
+- Tailwind CSS is used for styling
+- FastAPI handles the backend API endpoints
+- FFmpeg is used for video processing
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ## License
 
-[Your License Here]
-
-## Support
-
-For support, please [create an issue](repository-issues-url) or contact [your-contact-info].
+This project is licensed under the MIT License - see the LICENSE file for details.
