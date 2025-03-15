@@ -199,17 +199,31 @@ def crop_video(input_path: str, output_path: str, target_ratio: str, position: f
                 border_size = int(subtitle_styles.get('borderSize', 2))
                 border_color = subtitle_styles.get('borderColor', '000000')
                 y_position = float(subtitle_styles.get('yPosition', 90))
+                
+                # Convert RGB hex colors to ASS BBGGRR format
+                def rgb_to_ass(color):
+                    # Remove any '#' if present
+                    color = color.lstrip('#')
+                    # Ensure 6 digits
+                    if len(color) != 6:
+                        return 'FFFFFF'  # Default to white if invalid
+                    # Convert from RGB to BGR (reverse pairs of characters)
+                    return color[4:6] + color[2:4] + color[0:2]
+                
+                font_color = rgb_to_ass(font_color)
+                border_color = rgb_to_ass(border_color)
+                
                 logger.info(f"Using custom styles: size={font_size}, color={font_color}, border={border_size}")
             else:
                 # Improved default styling
                 font_size = max(32, min(64, new_height // 15))  # Larger default font size
-                font_color = 'ffffff'
+                font_color = 'FFFFFF'  # White in ASS format
                 border_size = 3
-                border_color = '000000'
+                border_color = '000000'  # Black in ASS format
                 y_position = 90
                 logger.info(f"Using default styles: size={font_size}, color={font_color}, border={border_size}")
             
-            # Create ASS style header
+            # Create ASS style header with corrected color format
             ass_header = f"""[Script Info]
 ScriptType: v4.00+
 PlayResX: {new_width}
